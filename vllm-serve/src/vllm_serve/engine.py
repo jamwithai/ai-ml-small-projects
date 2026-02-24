@@ -1,14 +1,14 @@
 from vllm import SamplingParams
 from vllm.engine.arg_utils import AsyncEngineArgs
+from vllm.engine.async_llm_engine import AsyncLLMEngine
 from vllm.sampling_params import RequestOutputKind
-from vllm.v1.engine.async_llm import AsyncLLM
 
 from vllm_serve.config import settings
 
-_engine: AsyncLLM | None = None
+_engine: AsyncLLMEngine | None = None
 
 
-async def init_engine() -> AsyncLLM:
+async def init_engine() -> AsyncLLMEngine:
     global _engine
 
     engine_args = AsyncEngineArgs(
@@ -20,13 +20,18 @@ async def init_engine() -> AsyncLLM:
         dtype=settings.dtype,
         quantization=settings.quantization,
     )
-    _engine = AsyncLLM.from_engine_args(engine_args)
+    _engine = AsyncLLMEngine.from_engine_args(engine_args)
     return _engine
 
 
-def get_engine() -> AsyncLLM:
+def get_engine() -> AsyncLLMEngine:
     assert _engine is not None, "Engine not initialized"
     return _engine
+
+
+def get_tokenizer():
+    """Return the tokenizer from the running engine."""
+    return get_engine().get_tokenizer()
 
 
 def shutdown_engine():

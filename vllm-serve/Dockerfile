@@ -1,24 +1,21 @@
-FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04 AS base
-
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.11 python3.11-venv python3-pip curl && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+# ---- Base image ----
+ARG BASE_IMAGE=vllm/vllm-openai:v0.11.0
+FROM ${BASE_IMAGE}
 
 WORKDIR /app
 
-# Install dependencies first (cache-friendly)
-COPY pyproject.toml .python-version ./
-RUN uv sync --no-dev --no-install-project
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Copy source and install project
+# Install the FastAPI wrapper deps (vllm/torch come from the base image)
+RUN uv pip install --system --no-cache --break-system-packages \
+    "fastapi>=0.115" \
+    "uvicorn[standard]>=0.34" \
+    "pydantic-settings>=2.7"
+
+# Install the project (no-deps because vllm/torch are already satisfied)
+COPY pyproject.toml .python-version ./
 COPY src/ src/
-RUN uv sync --no-dev
+RUN uv pip install --system --no-cache --break-system-packages --no-deps .
 
 EXPOSE 8000
-
-# Production: use multiple workers behind the vLLM engine
-CMD ["uv", "run", "vllm-serve"]
+CMD ["python", "-m", "vllm_serve.app"]

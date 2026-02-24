@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 from vllm_serve.config import settings
-from vllm_serve.engine import build_sampling_params, get_engine, init_engine, shutdown_engine
+from vllm_serve.engine import build_sampling_params, get_engine, get_tokenizer, init_engine, shutdown_engine
 from vllm_serve.models import (
     ChatRequest,
     ChatResponse,
@@ -43,16 +43,10 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 
 def _apply_chat_template(messages: list[Message]) -> str:
-    parts: list[str] = []
-    for m in messages:
-        if m.role == "system":
-            parts.append(f"<|system|>\n{m.content}")
-        elif m.role == "user":
-            parts.append(f"<|user|>\n{m.content}")
-        elif m.role == "assistant":
-            parts.append(f"<|assistant|>\n{m.content}")
-    parts.append("<|assistant|>\n")
-    return "\n".join(parts)
+    tokenizer = get_tokenizer()
+    return tokenizer.apply_chat_template(
+        [m.model_dump() for m in messages], tokenize=False, add_generation_prompt=True,
+    )
 
 
 def _request_id() -> str:

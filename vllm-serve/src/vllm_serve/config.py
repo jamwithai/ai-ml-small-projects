@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    model_config = {"env_prefix": "VLLM_", "env_file": ".env"}
+    model_config = {"env_prefix": "SERVE_", "env_file": ".env"}
 
     # Model
     model: str = "meta-llama/Llama-3.1-8B-Instruct"
